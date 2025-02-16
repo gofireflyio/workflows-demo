@@ -3,31 +3,21 @@ provider "aws" {
 }
 
 # VPC and Networking
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  tags = {
-    Name = "${var.project_name}-vpc"
-  }
+data "aws_vpc" "main" {
+  default = true
 }
 
-resource "aws_subnet" "main" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.subnet_cidr
+data "aws_subnet" "main" {
+  vpc_id            = data.aws_vpc.main.id
   availability_zone = "${var.aws_region}a"
-
-  tags = {
-    Name = "${var.project_name}-subnet"
-  }
+  default_for_az    = true
 }
 
 # Security Group
 resource "aws_security_group" "instance_sg" {
   name        = "${var.project_name}-sg"
   description = "Security group for EC2 instance"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.aws_vpc.main.id
 
   ingress {
     from_port   = 22
@@ -87,22 +77,6 @@ resource "aws_volume_attachment" "data_att" {
 # S3 Bucket
 resource "aws_s3_bucket" "data" {
   bucket = "${var.project_name}-data-${random_string.suffix.result}"
-}
-
-resource "aws_s3_bucket_public_access_block" "data" {
-  bucket = aws_s3_bucket.data.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_acl" "data" {
-  depends_on = [aws_s3_bucket_public_access_block.data]
-
-  bucket = aws_s3_bucket.data.id
-  acl    = "private"
 }
 
 resource "random_string" "suffix" {
