@@ -7,12 +7,6 @@ data "aws_vpc" "main" {
   default = true
 }
 
-data "aws_subnet" "main" {
-  vpc_id            = data.aws_vpc.main.id
-  availability_zone = "${var.aws_region}a"
-  default_for_az    = true
-}
-
 # Security Group
 resource "aws_security_group" "instance_sg" {
   name        = "${var.project_name}-sg"
@@ -43,7 +37,7 @@ resource "aws_instance" "main" {
   ami           = var.instance_ami
   instance_type = "t2.micro"
 
-  subnet_id                   = data.aws_subnet.main.id
+  subnet_id                   = "subnet-0780c6ca622f80265"
   vpc_security_group_ids     = [aws_security_group.instance_sg.id]
   associate_public_ip_address = true
 
