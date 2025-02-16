@@ -1,15 +1,15 @@
-name: Deploy workflows-demo Terraform Workspace
+name: Deploy aws-env Terraform Workspace
 "on":
     push:
         branches:
             - main
         paths:
-            - terraform-aws-demo/**
+            - aws-env/**
     pull_request:
         branches:
             - main
         paths:
-            - terraform-aws-demo/**
+            - aws-env/**
     workflow_dispatch:
         inputs:
             apply:
@@ -25,7 +25,7 @@ jobs:
             id-token: write
         defaults:
             run:
-                working-directory: terraform-aws-demo
+                working-directory: aws-env
         env:
             AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
             AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -67,12 +67,12 @@ jobs:
               uses: gofireflyio/fireflyci@v0.5.101
               with:
                 command: post-plan
-                context: terraform-aws-demo
+                context: aws-env
                 init-log-file: init.log
                 plan-json-log-file: plan_log.jsonl
                 plan-output-file: plan_output.json
                 plan-raw-log-file: plan_output_raw.log
-                workspace: workflows-demo
+                workspace: aws-env
             - name: Terraform Apply
               if: steps.set-params.outputs.apply == 'true' && steps.plan.outcome == 'success'
               run: terraform apply -auto-approve -json > apply_log.jsonl
@@ -83,6 +83,6 @@ jobs:
               with:
                 apply-log-file: apply_log.jsonl
                 command: post-apply
-                context: terraform-aws-demo
-                workspace: workflows-demo
+                context: aws-env
+                workspace: aws-env
               continue-on-error: true
