@@ -1,0 +1,88 @@
+name: Deploy workflows-demo Terraform Workspace
+"on":
+    push:
+        branches:
+            - main
+        paths:
+            - terraform-aws-demo/**
+    pull_request:
+        branches:
+            - main
+        paths:
+            - terraform-aws-demo/**
+    workflow_dispatch:
+        inputs:
+            apply:
+                description: Should apply Terraform changes?
+                type: boolean
+                default: false
+jobs:
+    deploy:
+        name: Deploy Terraform Workspace
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            id-token: write
+        defaults:
+            run:
+                working-directory: terraform-aws-demo
+        env:
+            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_WEB_IDENTITY_TOKEN_FILE: ""
+            FIREFLY_ACCESS_KEY: ${{ secrets.FIREFLY_ACCESS_KEY }}
+            FIREFLY_SECRET_KEY: ${{ secrets.FIREFLY_SECRET_KEY }}
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+              with:
+                fetch-depth: 0
+            - name: Set deployment parameters
+              id: set-params
+              run: |-
+                if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                  echo "apply=${{ github.event.inputs.apply }}" >> $GITHUB_OUTPUT
+                elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+                  echo "apply=true" >> $GITHUB_OUTPUT
+                else
+                  echo "apply=false" >> $GITHUB_OUTPUT
+                fi
+            - name: Get Web Identity Token
+              run: 'curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r ''.value'' > $AWS_WEB_IDENTITY_TOKEN_FILE'
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                terraform_version: 1.10.5
+                terraform_wrapper: false
+            - name: Initialize Terraform
+              id: init
+              run: terraform init >& init.log
+              continue-on-error: true
+            - name: Terraform Plan
+              id: plan
+              if: steps.init.outcome == 'success'
+              run: terraform plan -json -out=tf.plan > plan_log.jsonl && terraform show -json tf.plan > plan_output.json && terraform show tf.plan > plan_output_raw.log
+              continue-on-error: true
+            - name: Firefly Post Plan
+              uses: gofireflyio/fireflyci@v0.5.101
+              with:
+                command: post-plan
+                context: terraform-aws-demo
+                init-log-file: init.log
+                plan-json-log-file: plan_log.jsonl
+                plan-output-file: plan_output.json
+                plan-raw-log-file: plan_output_raw.log
+                workspace: workflows-demo
+            - name: Terraform Apply
+              if: steps.set-params.outputs.apply == 'true' && steps.plan.outcome == 'success'
+              run: terraform apply -auto-approve -json > apply_log.jsonl
+              continue-on-error: true
+            - name: Firefly Post Apply
+              if: steps.set-params.outputs.apply == 'true' && steps.plan.outcome == 'success'
+              uses: gofireflyio/fireflyci@v0.5.101
+              with:
+                apply-log-file: apply_log.jsonl
+                command: post-apply
+                context: terraform-aws-demo
+                workspace: workflows-demo
+              continue-on-error: true
