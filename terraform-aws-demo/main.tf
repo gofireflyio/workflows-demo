@@ -32,19 +32,16 @@ resource "aws_security_group" "instance_sg" {
   }
 }
 
-# EC2 Instance
-resource "aws_instance" "main" {
-  ami           = var.instance_ami
-  instance_type = "t2.micro"
+module "ec2_instance" {
+  source  = "terraform-aws-modules/ec2-instance/aws"
 
-  subnet_id                   = "subnet-0780c6ca622f80265"
-  vpc_security_group_ids     = [aws_security_group.instance_sg.id]
-  associate_public_ip_address = true
+  name = "main-instance"
 
-  root_block_device {
-    volume_size = 4
-    volume_type = "gp3"
-  }
+  instance_type          = "t2.micro"
+  key_name               = "main-key"
+  monitoring             = true
+  vpc_security_group_ids = [aws_security_group.instance_sg.id]
+  subnet_id              = "subnet-0780c6ca622f80265"
 
   tags = {
     Name = "${var.project_name}-instance"
@@ -65,7 +62,7 @@ resource "aws_ebs_volume" "data" {
 resource "aws_volume_attachment" "data_att" {
   device_name = "/dev/xvdf"
   volume_id   = aws_ebs_volume.data.id
-  instance_id = aws_instance.main.id
+  instance_id = module.ec2_instance.id
 }
 
 # S3 Bucket
