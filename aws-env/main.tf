@@ -60,7 +60,7 @@ module "ec2_instance" {
 # EBS Volume
 resource "aws_ebs_volume" "data" {
   availability_zone = "${var.aws_region}a"
-  size             = 1
+  size             = 2
   type             = "gp3"
 
   tags = {
