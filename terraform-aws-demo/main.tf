@@ -32,6 +32,12 @@ resource "aws_security_group" "instance_sg" {
   }
 }
 
+data "aws_subnet" "main" {
+  vpc_id            = data.aws_vpc.main.id
+  availability_zone = "${var.aws_region}a"
+  default_for_az    = true
+}
+
 module "ec2_instance" {
   source  = "terraform-aws-modules/ec2-instance/aws"
 
@@ -41,7 +47,7 @@ module "ec2_instance" {
   key_name               = "main-key"
   monitoring             = true
   vpc_security_group_ids = [aws_security_group.instance_sg.id]
-  subnet_id              = "subnet-0780c6ca622f80265"
+  subnet_id              = data.aws_subnet.main.id
 
   tags = {
     Name = "${var.project_name}-instance"
