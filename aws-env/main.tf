@@ -79,22 +79,6 @@ resource "aws_s3_bucket" "data" {
   bucket = "${var.project_name}-data-${random_string.suffix.result}"
 }
 
-resource "aws_s3_bucket_public_access_block" "data" {
-  bucket = aws_s3_bucket.data.id
-
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-
-resource "aws_s3_bucket_acl" "data" {
-  depends_on = [aws_s3_bucket_public_access_block.data]
-  
-  bucket = aws_s3_bucket.data.id
-  acl    = "public-read"
-}
-
 resource "random_string" "suffix" {
   length  = 8
   special = false
