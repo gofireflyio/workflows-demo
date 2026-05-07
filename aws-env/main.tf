@@ -43,7 +43,7 @@ resource "aws_subnet" "main" {
 }
 
 module "ec2_instance" {
-  source  = "terraform-aws-modules/ec2-instance/aws"
+  source = "terraform-aws-modules/ec2-instance/aws"
 
   name = "main-instance"
 
@@ -60,8 +60,8 @@ module "ec2_instance" {
 # EBS Volume
 resource "aws_ebs_volume" "data" {
   availability_zone = "${var.aws_region}a"
-  size             = 2
-  type             = "gp3"
+  size              = 2
+  type              = "gp3"
 
   tags = {
     Name = "${var.project_name}-ebs"
@@ -83,4 +83,45 @@ resource "random_string" "suffix" {
   length  = 8
   special = false
   upper   = false
+}
+
+module "gal_test2_ec2_instance" {
+  source = "terraform-aws-modules/ec2-instance/aws"
+
+  name = "gal-test2"
+
+  ami                         = "ami-0ed094fb1304fd857"
+  instance_type               = "t3.micro"
+  key_name                    = "test-gal"
+  monitoring                  = false
+  vpc_security_group_ids      = ["sg-0b80f1558cfa31bde"]
+  subnet_id                   = "subnet-07cdadc1c1e56248a"
+  associate_public_ip_address = true
+  private_ip                  = "10.216.0.112"
+  ipv6_address_count          = 0
+  cpu_credits                 = "unlimited"
+  ebs_optimized               = true
+
+  metadata_options = {
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = 2
+    http_tokens                 = "required"
+    instance_metadata_tags      = "disabled"
+  }
+
+  root_block_device = [
+    {
+      delete_on_termination = true
+      device_name           = "/dev/xvda"
+      encrypted             = false
+      iops                  = 3000
+      throughput            = 125
+      volume_size           = 8
+      volume_type           = "gp3"
+    }
+  ]
+
+  tags = {
+    Name = "gal-test2"
+  }
 }
