@@ -47,7 +47,7 @@ module "ec2_instance" {
 
   name = "main-instance"
 
-  instance_type          = "t2.micro"
+  instance_type          = "t3.micro"
   monitoring             = true
   vpc_security_group_ids = [aws_security_group.instance_sg.id]
   subnet_id              = aws_subnet.main.id
@@ -60,7 +60,7 @@ module "ec2_instance" {
 # EBS Volume
 resource "aws_ebs_volume" "data" {
   availability_zone = "${var.aws_region}a"
-  size             = 2
+  size             = 5
   type             = "gp3"
 
   tags = {
@@ -72,15 +72,4 @@ resource "aws_volume_attachment" "data_att" {
   device_name = "/dev/xvdf"
   volume_id   = aws_ebs_volume.data.id
   instance_id = module.ec2_instance.id
-}
-
-# S3 Bucket
-resource "aws_s3_bucket" "data" {
-  bucket = "${var.project_name}-data-${random_string.suffix.result}"
-}
-
-resource "random_string" "suffix" {
-  length  = 8
-  special = false
-  upper   = false
 }
